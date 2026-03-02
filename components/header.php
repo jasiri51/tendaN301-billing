@@ -56,7 +56,7 @@
     </ul>
     <ul class="navbar-nav ml-auto">
         <li class="nav-item dropdown">
-            <a class="nav-link" href="users">
+            <a class="nav-link" href="billing">
                 <i class="far fa-bell"></i>
                 <span class="badge badge-warning navbar-badge">0</span> <!-- This will be dynamically updated -->
             </a>

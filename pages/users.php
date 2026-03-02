@@ -85,20 +85,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ");
                 $stmt->execute([$router['id']]);
                 $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-                foreach ($users as $user):
-                    // Check if the user's remaining time is expired
-                    $remainingSeconds = max(strtotime($user['end_at']) - time(), 0);
-                    $isExpired = $remainingSeconds <= 0;
-
-                    // If expired, update internet_access to 0
-                    if ($isExpired) {
-                        $updateAccessStmt = $db->prepare("UPDATE billing SET internet_access = 0 WHERE id = ?");
-                        $updateAccessStmt->execute([$user['id']]);
-                    }
-
-                    $planDuration = ($user['days'] ?? 0) . "d " . ($user['hours'] ?? 0) . "h " . ($user['minutes'] ?? 0) . "m";
                 ?>
+
+                <?php if ($users): ?>
                     <div class="card shadow mb-4">
                         <div class="card-body">
                             <table class="table table-bordered table-striped">
@@ -116,6 +105,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     </tr>
                                 </thead>
                                 <tbody>
+                                    <?php foreach ($users as $user):
+                                        $remainingSeconds = max(strtotime($user['end_at']) - time(), 0);
+                                        $isExpired = $remainingSeconds <= 0;
+
+                                        // If expired, update internet_access to 0
+                                        if ($isExpired) {
+                                            $updateAccessStmt = $db->prepare("UPDATE billing SET internet_access = 0 WHERE id = ?");
+                                            $updateAccessStmt->execute([$user['id']]);
+                                        }
+
+                                        $planDuration = ($user['days'] ?? 0) . "d " . ($user['hours'] ?? 0) . "h " . ($user['minutes'] ?? 0) . "m";
+                                    ?>
                                     <tr id="user-<?php echo $user['id']; ?>" style="background-color: <?php echo $isExpired ? '#f8d7da' : ''; ?>">
                                         <td><?php echo htmlspecialchars($user['name']); ?></td>
                                         <td><?php echo htmlspecialchars($user['phone_number']); ?></td>
@@ -132,30 +133,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         <td>
                                             <form method="POST" class="mb-1">
                                                 <input type="hidden" name="user_id" value="<?php echo $user['id']; ?>">
-                                                <select name="new_plan_id" class="form-control form-control-sm mb-1" <?php echo $isExpired ? 'disabled' : ''; ?>>
+                                                <select name="new_plan_id" class="form-control form-control-sm mb-1">
                                                     <?php foreach ($plans as $plan): ?>
                                                         <option value="<?php echo $plan['id']; ?>" <?php echo $plan['id'] == $user['plan_id'] ? 'selected' : ''; ?>>
                                                             <?php echo htmlspecialchars($plan['name']); ?>
                                                         </option>
                                                     <?php endforeach; ?>
                                                 </select>
-                                                <button type="submit" class="btn btn-info btn-sm w-100" <?php echo $isExpired ? 'disabled' : ''; ?>>Change Plan</button>
+                                                <button type="submit" class="btn btn-info btn-sm w-100">Change Plan</button>
                                             </form>
                                             <form method="POST">
                                                 <input type="hidden" name="delete_user_id" value="<?php echo $user['id']; ?>">
-                                                <button type="submit" class="btn btn-danger btn-sm w-100" <?php echo $isExpired ? 'disabled' : ''; ?>>Delete</button>
+                                                <button type="submit" class="btn btn-danger btn-sm w-100">Delete</button>
                                             </form>
                                         </td>
                                     </tr>
+                                    <?php endforeach; ?>
                                 </tbody>
                             </table>
                         </div>
                     </div>
-                <?php endforeach; ?>
-
-                <?php if (!$users): ?>
+                <?php else: ?>
                     <p>No users found for this router.</p>
                 <?php endif; ?>
+
             <?php endforeach; ?>
         </div>
     </section>
@@ -181,12 +182,6 @@ document.querySelectorAll('.remaining-time').forEach(td => {
 
         if (remaining <= 0) {
             row.style.backgroundColor = '#f8d7da';
-            const select = row.querySelector('select');
-            const buttons = row.querySelectorAll('button');
-            // Disable buttons after expiration, but allow the plan change
-            select.disabled = true;
-            buttons.forEach(btn => btn.disabled = true);
-            clearInterval(interval);
         }
     }, 1000);
 });
